@@ -45,7 +45,7 @@ zabbix_agent_1 ansible_host=10.0.2.6 ansible_ssh_pass=osboxes.org
 
 
 
-### Create apach server role
+### Create apach server role % configure port 80 and SElinux
 - Create role structure
 ```
 # ansible-galaxy init apache-server
@@ -53,13 +53,20 @@ zabbix_agent_1 ansible_host=10.0.2.6 ansible_ssh_pass=osboxes.org
 - Write apache server configuration in `~/ansible_task/roles/apache-server/tasks/main.yml`
 ```
 ---
-# tasks file for apache-server
+# tasks file for apache-server & open port 80 and SELinux to make sure that is accessible
 
 - name: Disable SELINUX
   lineinfile:
     dest: /etc/sysconfig/selinux
     regexp: '^SELINUX=enforcing'
     line: 'SELINUX=disabled'
+    
+# Check port 80 & selinux
+- name: Open port 80 in firewall
+  firewalld:
+    state: enabled
+    port: 80/tcp
+    permanent: true
     
 - name: Reboot system
   reboot:
@@ -74,13 +81,6 @@ zabbix_agent_1 ansible_host=10.0.2.6 ansible_ssh_pass=osboxes.org
     name: httpd
     state: started
     enabled: true
-
-# Check port 80 & selinux
-- name: Open port 80 in firewall
-  firewalld:
-    state: enabled
-    port: 80/tcp
-    permanent: true
 ```
 
 
