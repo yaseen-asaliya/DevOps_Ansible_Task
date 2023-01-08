@@ -8,7 +8,9 @@
 ```
 
 
-* Configure ssh keys to connect to remote machines
+### Configure ssh keys to connect to remote machines
 - generate ssh key 
-`ssh-keygen`
+```
+ssh-keygen
+```
 
