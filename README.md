@@ -40,9 +40,9 @@
     dest: /etc/sysconfig/selinux
     regexp: '^SELINUX=enforcing'
     line: 'SELINUX=disabled'
+    
 - name: Reboot system
   reboot:
-
 
 - name: Install Apache server
   yum:
