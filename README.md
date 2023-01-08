@@ -19,7 +19,7 @@
 # ssh-copy-id -i id_rsa.pub root@10.0.2.5
 # ssh-copy-id -i id_rsa.pub root@10.0.2.6
 ```
-- To conncetion to the clients servers using ssh use this format `hostname@hostnumber`, and here is some examples 
+- To conncetion to the clients servers using ssh use this format `username@hostnumber`, and here is some examples 
 ```
 # ssh root@10.0.2.5
 # ssh root@10.0.2.6
