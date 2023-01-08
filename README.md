@@ -83,6 +83,59 @@ zabbix_agent_1 ansible_host=10.0.2.6 ansible_ssh_pass=osboxes.org
     enabled: true
 ```
 
+* Create playbook inside `ansible_task` to create local yum repositorys for all hosts & set roles for local server, zabbix server, and zabbix agent
+```
+---
+# Create local yum repositorys on all hosts & configure zabbix server and agent
+
+# create repos in all hosts
+
+- hosts: all
+  tasks:
+  - name: Create local yum repository directory
+    file:
+      path: /var/www/html/localrepo
+      state: directory
+
+  - name: Download Zabbix repository package
+    get_url:
+      url: https://repo.zabbix.com/zabbix/4.4/rhel/7/x86_64/
+      dest: /var/www/html/localrepo
+
+  - name: Create repodata for local yum repository
+    shell: createrepo /var/www/html/localrepo
+
+  - name: Create yum repo configration file
+    blockinfile:
+      path: /etc/yum.repos.d/localrepo.repo
+      block: |
+        [localrepo]
+        name=Apache
+        baseurl=file:/var/www/html/localrepo
+        enabled=1
+        gpgcheck=0
+      create: yes
 
 
+# Configure zabbix server and agent
 
+- name: Install Apache server on local machines
+  hosts: local
+  roles:
+    - roles/apache-server
+    - roles/zabbix-configrations
+
+- name: Configer Zabbix-server
+  hosts: zabbix-server
+  roles:
+    - roles/apache-server
+    - roles/zabbix-configrations
+    - roles/zabbix-server
+
+- name: Configer Zabbix-agent
+  hosts: zabbix-agent
+  roles:
+    - roles/apache-server
+    - roles/zabbix-configrations
+    - roles/zabbix-agent
+```
