@@ -24,6 +24,26 @@
 # ssh root@10.0.2.5
 # ssh root@10.0.2.6
 ```
+> All subsequent steps will generate inside `ansible_task` directory.
+
+### Configure ansible hosts and host group(local,zabbix-server, zabbix-agent)
+* Create file in `ansible_task/inventory.txt`
+```
+# vi ansible_task/inventory.txt
+```
+* List all the hosts as a groubs inside `inventory.txt`
+```
+[local]
+controller ansible_host=10.0.2.4 ansible_ssh_pass=osboxes.org
+
+[zabbix-server]
+zabbix_server_1 ansible_host=10.0.2.5 ansible_ssh_pass=osboxes.org
+
+[zabbix-agent]
+zabbix_agent_1 ansible_host=10.0.2.6 ansible_ssh_pass=osboxes.org
+```
+
+
 
 ### Create apach server role
 - Create role structure
