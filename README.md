@@ -25,3 +25,44 @@
 # ssh root@10.0.2.6
 ```
 
+### Create apach server role
+- Create role structure
+```
+# ansible-galaxy init apache-server
+```
+- Write apache server configuration in `~/ansible_task/roles/apache-server/tasks/main.yml`
+```
+---
+# tasks file for apache-server
+
+- name: Disable SELINUX
+  lineinfile:
+    dest: /etc/sysconfig/selinux
+    regexp: '^SELINUX=enforcing'
+    line: 'SELINUX=disabled'
+- name: Reboot system
+  reboot:
+
+
+- name: Install Apache server
+  yum:
+    name: httpd
+    state: present
+
+- name: Start Apache service
+  service:
+    name: httpd
+    state: started
+    enabled: true
+
+# Check port 80 & selinux
+- name: Open port 80 in firewall
+  firewalld:
+    state: enabled
+    port: 80/tcp
+    permanent: true
+```
+
+
+
+
