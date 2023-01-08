@@ -139,3 +139,7 @@ zabbix_agent_1 ansible_host=10.0.2.6 ansible_ssh_pass=osboxes.org
     - roles/zabbix-configrations
     - roles/zabbix-agent
 ```
+* execute playbook to apply all changes
+```
+# ansible-playbook playbook.yml -i inventory.txt
+```
