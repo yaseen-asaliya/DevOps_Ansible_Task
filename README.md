@@ -45,7 +45,7 @@ zabbix_agent_1 ansible_host=10.0.2.6 ansible_ssh_pass=osboxes.org
 
 
 
-### Create apach server role % configure port 80 and SElinux
+### Create apach server role & configure port 80 and SElinux
 - Create role structure
 ```
 # ansible-galaxy init apache-server
