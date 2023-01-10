@@ -99,7 +99,6 @@ zabbix_agent_1 ansible_host=10.0.2.6
 - Write zabbix configrations in `ansible_task/roles/zabbix-configrations/tasks/main.yml`
 ```
 ---
----
 # tasks file for zabbix-configrations
 
 - name: Install epel-release package
@@ -216,6 +215,7 @@ zabbix_agent_1 ansible_host=10.0.2.6
 root_pass: "osboxes.org"
 new_root_pass: "osboxes.org"
 zabbix_user_pass: "osboxes.org"
+zabbix_user_name: "zabbixuser"
 ```
 
 
