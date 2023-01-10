@@ -16,6 +16,7 @@
 - Copy key to the destination servers
 ```
 # cd /root/.ssh
+# ssh-copy-id -i id_rsa.pub root@10.0.2.4
 # ssh-copy-id -i id_rsa.pub root@10.0.2.5
 # ssh-copy-id -i id_rsa.pub root@10.0.2.6
 ```
@@ -38,13 +39,13 @@
 * List all the hosts as a groubs inside `inventory.txt`
 ```
 [local]
-controller ansible_host=10.0.2.4 ansible_ssh_pass=osboxes.org
+controller ansible_host=10.0.2.4
 
 [zabbix-server]
-zabbix_server_1 ansible_host=10.0.2.5 ansible_ssh_pass=osboxes.org
+zabbix_server_1 ansible_host=10.0.2.5
 
 [zabbix-agent]
-zabbix_agent_1 ansible_host=10.0.2.6 ansible_ssh_pass=osboxes.org
+zabbix_agent_1 ansible_host=10.0.2.6
 ```
 
  
