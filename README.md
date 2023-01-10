@@ -99,10 +99,8 @@ zabbix_agent_1 ansible_host=10.0.2.6
 - Write zabbix configrations in `ansible_task/roles/zabbix-configrations/tasks/main.yml`
 ```
 ---
-# tasks file for apache-server
-
-- name: Download and install EPEL repository
-  shell: wget http://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm && rpm -Uvh epel-release-latest-7*.rpm
+---
+# tasks file for zabbix-configrations
 
 - name: Install epel-release package
   yum:
@@ -113,12 +111,6 @@ zabbix_agent_1 ansible_host=10.0.2.6
   yum:
     name: http://rpms.remirepo.net/enterprise/remi-release-7.rpm
     state: present
-
-- name: Disable remi-php54 repository
-  command: yum-config-manager --disable remi-php54
-
-- name: Enable remi-php72 repository
-  command: yum-config-manager --enable remi-php72
 
 - name: Install PHP packages
   yum:
@@ -135,13 +127,14 @@ zabbix_agent_1 ansible_host=10.0.2.6
       - php-mysql
       - php-gettext
       - php-bcmath
+    enablerepo: remi
     state: present
 
 - name: Uncomment date.timezone in /etc/php.ini
   lineinfile:
     dest: /etc/php.ini
     regexp: '^;date.timezone ='
-    line: 'date.timezone = Australia/Sydney'
+    line: 'date.timezone = Asia/Hebron'
     state: present
 
 - name: Install MySQL-python
@@ -155,24 +148,29 @@ zabbix_agent_1 ansible_host=10.0.2.6
     enablerepo: remi
     state: present
 
-- name: Start MariaDB service
+- name: Start and enable MariaDB service
   service:
     name: mariadb
     state: started
     enabled: true
 
 - name: Run mysql_secure_installation
-  expect:
-    command: mysql_secure_installation
-    responses:
-      "Enter current password for root (enter for none):": "{{ root_pass }}\n"
-      "Set root password? [Y/n]": "y\n"
-      "New password:": "{{ new_root_pass }}\n"
-      "Re-enter new password:": "{{ new_root_pass }}\n"
-      "Remove anonymous users? [Y/n]": "y\n"
-      "Disallow root login remotely? [Y/n]": "y\n"
-      "Remove test database and access to it? [Y/n]": "y\n"
-      "Reload privilege tables now? [Y/n]": "y\n"
+  shell: |
+    echo -e "{{ root_pass }}\n\
+    y\n\
+    {{ new_root_pass }}\n\
+    {{ new_root_pass }}\n\
+    y\n\
+    y\n\
+    y\n\
+    y\n" | sudo mysql_secure_installation
+  register: mysql_secure_installation_output
+  become: true
+  become_user: root
+
+- name: mysql secure installation outputs
+  debug:
+    msg: "{{ mysql_secure_installation_output.stdout }}"
 
 - name: Log in to MariaDB as root user
   mysql_user:
@@ -197,7 +195,7 @@ zabbix_agent_1 ansible_host=10.0.2.6
 
 - name: Create zabbixuser user and grant privileges on fosslinuxzabbix database
   mysql_user:
-    name: zabbixuser
+    name: "{{ zabbix_user_name }}"
     password: "{{ root_pass }}"
     priv: 'fosslinuxzabbix.*:ALL'
     state: present
@@ -208,10 +206,6 @@ zabbix_agent_1 ansible_host=10.0.2.6
 
 - name: Flush privileges
   command: mysql -u root -p"{{ root_pass }}" -e "FLUSH PRIVILEGES"
-
-- name: Install Zabbix repository
-  become: true
-  command: rpm -Uvh https://repo.zabbix.com/zabbix/4.0/rhel/7/x86_64/zabbix-release-4.0-1.el7.noarch.rpm
 
 ```
 * Set variables inside `ansible_task/roles/zabbix-configrations/vars/main.yml` to use them in tasks
