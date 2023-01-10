@@ -74,7 +74,6 @@ zabbix_agent_1 ansible_host=10.0.2.6
     port: 80/tcp
     permanent: true
 
-
 - name: Install Apache server
   yum:
     name: httpd
@@ -85,6 +84,7 @@ zabbix_agent_1 ansible_host=10.0.2.6
     name: httpd
     state: started
     enabled: true
+
 ```
 
 
@@ -194,9 +194,9 @@ zabbix_agent_1 ansible_host=10.0.2.6
 
 - name: Create zabbixuser user and grant privileges on zabbixdb database
   mysql_user:
-    name: "{{ zabbix_user_name }}"
-    password: "{{ zabbix_user_pass }}"
-    priv: '"{{ zabbix_db_name }}".*:ALL'
+    name: zabbixuser
+    password: "{{ root_pass }}"
+    priv: 'zabbixdb.*:ALL'
     state: present
     login_user: root
     login_password: "{{ root_pass }}"
@@ -233,6 +233,7 @@ zabbix_db_name: "zabbixdb"
 - name: Install the Zabbix server
   yum:
     name: "{{ item }}"
+    enablerepo: localrepo
     state: present
   with_items:
     - zabbix-server-mysql
@@ -248,7 +249,7 @@ zabbix_db_name: "zabbixdb"
   lineinfile:
     path: /etc/httpd/conf.d/zabbix.conf
     regexp: '^# php_value date.timezone*'
-    line: 'php_value date.timezone Australia/Sydney'
+    line: 'php_value date.timezone Asia/Hebron'
 
 - name: Restart httpd
   systemd:
@@ -256,7 +257,7 @@ zabbix_db_name: "zabbixdb"
     state: restarted
 
 - name: Import database
-  shell: zcat /usr/share/doc/zabbix-server-mysql-4.0.44/create.sql.gz | mysql -u zabbixuser -posboxes.org fosslinuxzabbix
+  shell: zcat /usr/share/doc/zabbix-server-mysql-4.0.44/create.sql.gz | mysql -u "{{ zabbix_username }}" -posboxes.org "{{ zabbix_db_name }}"
 
 - name: Modify zabbix_server.conf file
   lineinfile:
@@ -265,31 +266,24 @@ zabbix_db_name: "zabbixdb"
     line: '{{ item.name }}={{ item.value }}'
   with_items:
     - { name: DBHost, value: localhost }
-    - { name: DBName, value: fosslinuxzabbix }
-    - { name: DBUser, value: zabbixuser }
+    - { name: DBName, value: "{{ zabbix_db_name }}" }
+    - { name: DBUser, value: "{{ zabbix_username }}" }
     - { name: DBPassword, value: "{{ database_pass }}" }
 
-- name: Restart zabbix-server service
+- name: Restart and Enable zabbix-server service
   service:
     name: zabbix-server
     state: restarted
-
-- name: Enable zabbix-server service
-  service:
-    name: zabbix-server
     enabled: yes
 
-- name: Add HTTP service to firewall
+- name: Add HTTP and HTTPS service to firewall
   firewalld:
-    service: http
+    service: "{{ item }}"
     permanent: yes
     state: enabled
-
-- name: Add HTTPS service to firewall
-  firewalld:
-    service: https
-    permanent: yes
-    state: enabled
+  with_items:
+    - http
+    - https
 
 - name: Reload firewall
   systemd:
@@ -298,16 +292,12 @@ zabbix_db_name: "zabbixdb"
 
 - name: Add Zabbix port to firewall
   firewalld:
-    port: 10051/tcp
+    port: "{{ item }}"
     permanent: yes
     state: enabled
-  register: result
-- name: Add Zabbix port to firewall
-  firewalld:
-    port: 10050/tcp
-    permanent: yes
-    state: enabled
-  when: result.changed
+  with_items:
+    - 10051/tcp
+    - 10050/tcp
 
 - name: Restart Apache service
   service:
@@ -320,7 +310,10 @@ zabbix_db_name: "zabbixdb"
 ---
 # vars file for zabbix-server
 
-database_pass: osboxes.org
+root_pass: "osboxes.org"
+zabbix_username: "zabbixuser"
+zabbix_db_name: "zabbixdb"
+database_pass: "osboxes.org"
 ```
 
 
@@ -339,6 +332,7 @@ database_pass: osboxes.org
 - name: Install Zabbix Agent
   yum:
     name: zabbix-agent
+    enablerepo: localrepo
     state: present
 
 - name: Modify agent configration file
@@ -347,79 +341,80 @@ database_pass: osboxes.org
     regexp: '^{{ item.name }}='
     line: '{{ item.name }}={{ item.value }}'
   with_items:
-    - { name: Server, value: 10.0.2.6 }
-    - { name: ServerActive, value: 10.0.2.6 }
-    - { name: Hostname, value: target2 }
+    - { name: Server, value: "{{ hostvars[groups['zabbix-server'][0]]['ansible_host'] }}" }
+    - { name: ServerActive, value: "{{ hostvars[groups['zabbix-server'][0]]['ansible_host'] }}" }
+    - { name: Hostname, value: "{{ groups['zabbix-agent'] }}" }
 
-
-- name: Restart Zabbix agent service
+- name: Restart and enable Zabbix agent service
   service:
     name: zabbix-agent
     state: restarted
-
-- name: Enable Zabbix agent service
-  service:
-    name: zabbix-agent
     enabled: yes
 
 ```
 
 
-### Create playbook inside `ansible_task` to create local yum repositorys for all hosts & set roles for local server, zabbix server, and zabbix agent
+* Create playbook inside `ansible_task` to create local yum repositorys for all hosts & set roles for local server, zabbix server, and zabbix agent
 ```
 ---
 # Create local yum repositorys on all hosts & configure zabbix server and agent
 
 # create repos in all hosts
 
-- hosts: all
+- name: Create local yum repository on local machine
+  hosts: local
   tasks:
   - name: Create local yum repository directory
     file:
       path: /var/www/html/localrepo
       state: directory
 
+
   - name: Download Zabbix repository package
     get_url:
-      url: https://repo.zabbix.com/zabbix/4.4/rhel/7/x86_64/
+      url: https://repo.zabbix.com/zabbix/4.0/rhel/7/x86_64/zabbix-release-4.0-1.el7.noarch.rpm
       dest: /var/www/html/localrepo
 
   - name: Create repodata for local yum repository
     shell: createrepo /var/www/html/localrepo
 
-  - name: Create yum repo configration file
-    blockinfile:
+
+
+- name: Create local repository configration file on all server
+  hosts: all
+  tasks:
+  - name: Create yum repo configuration file
+    lineinfile:
       path: /etc/yum.repos.d/localrepo.repo
-      block: |
-        [localrepo]
-        name=Apache
-        baseurl=file:/var/www/html/localrepo
-        enabled=1
-        gpgcheck=0
+      line: "{{ item }}"
       create: yes
+    loop:
+    - "[localrepo]"
+    - "name=My Local Repo"
+    - "baseurl=http://10.0.2.4/localrepo"
+    - "enabled=1"
+    - "gpgcheck=0"
 
 
 # Configure zabbix server and agent
 
-- name: Install Apache server on local machines
-  hosts: local
+- name: Setup roles Apache server and zabbix configrations on all machines
+  hosts: all
   roles:
     - roles/apache-server
     - roles/zabbix-configrations
 
-- name: Configer Zabbix-server
+
+- name: Setup zabbix server role
   hosts: zabbix-server
   roles:
-    - roles/apache-server
-    - roles/zabbix-configrations
     - roles/zabbix-server
 
 - name: Configer Zabbix-agent
   hosts: zabbix-agent
   roles:
-    - roles/apache-server
-    - roles/zabbix-configrations
     - roles/zabbix-agent
+
 ```
 * execute playbook to apply all changes
 ```
