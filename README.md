@@ -181,9 +181,9 @@ zabbix_agent_1 ansible_host=10.0.2.6
   become: true
   become_user: root
 
-- name: Create fosslinuxzabbix database
+- name: Create zabbixdb database
   mysql_db:
-    name: fosslinuxzabbix
+    name: "{{ zabbix_db_name }}"
     state: present
     encoding: utf8
     collation: utf8_bin
@@ -192,11 +192,11 @@ zabbix_agent_1 ansible_host=10.0.2.6
   become: true
   become_user: root
 
-- name: Create zabbixuser user and grant privileges on fosslinuxzabbix database
+- name: Create zabbixuser user and grant privileges on zabbixdb database
   mysql_user:
     name: "{{ zabbix_user_name }}"
-    password: "{{ root_pass }}"
-    priv: 'fosslinuxzabbix.*:ALL'
+    password: "{{ zabbix_user_pass }}"
+    priv: '"{{ zabbix_db_name }}".*:ALL'
     state: present
     login_user: root
     login_password: "{{ root_pass }}"
@@ -216,6 +216,7 @@ root_pass: "osboxes.org"
 new_root_pass: "osboxes.org"
 zabbix_user_pass: "osboxes.org"
 zabbix_user_name: "zabbixuser"
+zabbix_db_name: "zabbixdb"
 ```
 
 
