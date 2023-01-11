@@ -1,0 +1,8 @@
+---
+# vars file for zabbix-configrations
+
+root_pass: "osboxes.org"
+new_root_pass: "osboxes.org"
+zabbix_user_pass: "osboxes.org"
+zabbix_user_name: "zabbixuser"
+zabbix_db_name: "zabbixdb"

@@ -1,0 +1,8 @@
+[local]
+controller ansible_host=10.0.2.4
+
+[zabbix-server]
+zabbix_server_1 ansible_host=10.0.2.5
+
+[zabbix-agent]
+zabbix_agent_1 ansible_host=10.0.2.6

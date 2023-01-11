@@ -1,0 +1,29 @@
+---
+# tasks file for zabbix-agent
+
+# vars file for zabbix-agent[root@ansiblecontroller zabbix-agent]# cat tasks/*
+
+# tasks file for zabbix-agent
+
+- name: Install Zabbix Agent
+  yum:
+    name: zabbix-agent
+    enablerepo: localrepo
+    state: present
+
+- name: Modify agent configration file
+  lineinfile:
+    path: /etc/zabbix/zabbix_agentd.conf
+    regexp: '^{{ item.name }}='
+    line: '{{ item.name }}={{ item.value }}'
+  with_items:
+    - { name: Server, value: "{{ hostvars[groups['zabbix-server'][0]]['ansible_host'] }}" }
+    - { name: ServerActive, value: "{{ hostvars[groups['zabbix-server'][0]]['ansible_host'] }}" }
+    - { name: Hostname, value: "{{ groups['zabbix-agent'] }}" }
+
+- name: Restart and enable Zabbix agent service
+  service:
+    name: zabbix-agent
+    state: restarted
+    enabled: yes
+

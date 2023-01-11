@@ -1,0 +1,59 @@
+---
+# Create local yum repositorys on all hosts & configure zabbix server and agent
+
+# create repos in all hosts
+
+- name: Create local yum repository on local machine
+  hosts: local
+  tasks:
+  - name: Create local yum repository directory
+    file:
+      path: /var/www/html/localrepo
+      state: directory
+
+
+  - name: Download Zabbix repository package
+    get_url:
+      url: https://repo.zabbix.com/zabbix/4.0/rhel/7/x86_64/zabbix-release-4.0-1.el7.noarch.rpm
+      dest: /var/www/html/localrepo
+
+  - name: Create repodata for local yum repository
+    shell: createrepo /var/www/html/localrepo
+
+
+
+- name: Create local repository configration file on all server
+  hosts: all
+  tasks:
+  - name: Create yum repo configuration file
+    lineinfile:
+      path: /etc/yum.repos.d/localrepo.repo
+      line: "{{ item }}"
+      create: yes
+    loop:
+    - "[localrepo]"
+    - "name=My Local Repo"
+    - "baseurl=http://10.0.2.4/localrepo"
+    - "enabled=1"
+    - "gpgcheck=0"
+
+
+# Configure zabbix server and agent
+
+- name: Setup roles Apache server and zabbix configrations on all machines
+  hosts: all
+  roles:
+    - roles/apache-server
+    - roles/zabbix-configrations
+
+
+- name: Setup zabbix server role
+  hosts: zabbix-server
+  roles:
+    - roles/zabbix-server
+
+- name: Configer Zabbix-agent
+  hosts: zabbix-agent
+  roles:
+    - roles/zabbix-agent
+

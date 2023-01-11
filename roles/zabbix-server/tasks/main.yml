@@ -1,0 +1,77 @@
+---
+# tasks file for zabbix-server
+
+- name: Install the Zabbix server
+  yum:
+    name: "{{ item }}"
+    enablerepo: localrepo
+    state: present
+  with_items:
+    - zabbix-server-mysql
+    - zabbix-web-mysql
+
+- name: Start Zabbix server service
+  service:
+    name: zabbix-server
+    state: started
+    enabled: true
+
+- name: Uncomment timezone line
+  lineinfile:
+    path: /etc/httpd/conf.d/zabbix.conf
+    regexp: '^# php_value date.timezone*'
+    line: 'php_value date.timezone Asia/Hebron'
+
+- name: Restart httpd
+  systemd:
+    name: httpd
+    state: restarted
+
+- name: Import database
+  shell: zcat /usr/share/doc/zabbix-server-mysql-4.0.44/create.sql.gz | mysql -u "{{ zabbix_username }}" -posboxes.org "{{ zabbix_db_name }}"
+
+- name: Modify zabbix_server.conf file
+  lineinfile:
+    path: /etc/zabbix/zabbix_server.conf
+    regexp: '^{{ item.name }}='
+    line: '{{ item.name }}={{ item.value }}'
+  with_items:
+    - { name: DBHost, value: localhost }
+    - { name: DBName, value: "{{ zabbix_db_name }}" }
+    - { name: DBUser, value: "{{ zabbix_username }}" }
+    - { name: DBPassword, value: "{{ database_pass }}" }
+
+- name: Restart and Enable zabbix-server service
+  service:
+    name: zabbix-server
+    state: restarted
+    enabled: yes
+
+- name: Add HTTP and HTTPS service to firewall
+  firewalld:
+    service: "{{ item }}"
+    permanent: yes
+    state: enabled
+  with_items:
+    - http
+    - https
+
+- name: Reload firewall
+  systemd:
+    name: firewalld
+    state: reloaded
+
+- name: Add Zabbix port to firewall
+  firewalld:
+    port: "{{ item }}"
+    permanent: yes
+    state: enabled
+  with_items:
+    - 10051/tcp
+    - 10050/tcp
+
+- name: Restart Apache service
+  service:
+    name: httpd
+    state: restarted
+

@@ -1,0 +1,107 @@
+---
+# tasks file for zabbix-configrations
+
+- name: Install epel-release package
+  yum:
+    name: epel-release
+    state: present
+
+- name: Install remi-release package
+  yum:
+    name: http://rpms.remirepo.net/enterprise/remi-release-7.rpm
+    state: present
+
+- name: Install PHP packages
+  yum:
+    name:
+      - php
+      - php-pear
+      - php-cgi
+      - php-common
+      - php-mbstring
+      - php-snmp
+      - php-gd
+      - php-pecl-mysql
+      - php-xml
+      - php-mysql
+      - php-gettext
+      - php-bcmath
+    enablerepo: remi
+    state: present
+
+- name: Uncomment date.timezone in /etc/php.ini
+  lineinfile:
+    dest: /etc/php.ini
+    regexp: '^;date.timezone ='
+    line: 'date.timezone = Asia/Hebron'
+    state: present
+
+- name: Install MySQL-python
+  yum:
+    name: MySQL-python
+    state: present
+
+- name: Install MariaDB
+  yum:
+    name: mariadb-server
+    enablerepo: remi
+    state: present
+
+- name: Start and enable MariaDB service
+  service:
+    name: mariadb
+    state: started
+    enabled: true
+
+- name: Run mysql_secure_installation
+  shell: |
+    echo -e "{{ root_pass }}\n\
+    y\n\
+    {{ new_root_pass }}\n\
+    {{ new_root_pass }}\n\
+    y\n\
+    y\n\
+    y\n\
+    y\n" | sudo mysql_secure_installation
+  register: mysql_secure_installation_output
+  become: true
+  become_user: root
+
+- name: mysql secure installation outputs
+  debug:
+    msg: "{{ mysql_secure_installation_output.stdout }}"
+
+- name: Log in to MariaDB as root user
+  mysql_user:
+    name: root
+    password: "{{ root_pass }}"
+    host: localhost
+    login_user: root
+    login_password: "{{ root_pass }}"
+  become: true
+  become_user: root
+
+- name: Create zabbixdb database
+  mysql_db:
+    name: "{{ zabbix_db_name }}"
+    state: present
+    encoding: utf8
+    collation: utf8_bin
+    login_user: root
+    login_password: "{{ root_pass }}"
+  become: true
+  become_user: root
+
+- name: Create zabbixuser user and grant privileges on zabbixdb database
+  mysql_user:
+    name: zabbixuser
+    password: "{{ root_pass }}"
+    priv: 'zabbixdb.*:ALL'
+    state: present
+    login_user: root
+    login_password: "{{ root_pass }}"
+  become: yes
+  become_user: root
+
+- name: Flush privileges
+  command: mysql -u root -p"{{ root_pass }}" -e "FLUSH PRIVILEGES"
