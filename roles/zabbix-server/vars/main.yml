@@ -1,0 +1,6 @@
+---
+# vars file for zabbix-server
+
+zabbix_username: "zabbixuser"
+zabbix_db_name: "zabbixdb"
+database_pass: "osboxes.org"

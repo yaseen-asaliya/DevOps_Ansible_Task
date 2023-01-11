@@ -1,0 +1,27 @@
+---
+# tasks file for apache-server
+
+- name: Disable SELINUX
+  lineinfile:
+    dest: /etc/sysconfig/selinux
+    regexp: '^SELINUX=enforcing'
+    line: 'SELINUX=disabled'
+
+# Check port 80 & selinux
+- name: Open port 80 in firewall
+  firewalld:
+    state: enabled
+    port: 80/tcp
+    permanent: true
+
+- name: Install Apache server
+  yum:
+    name: httpd
+    state: present
+
+- name: Start and enable Apache service
+  service:
+    name: httpd
+    state: started
+    enabled: true
+
